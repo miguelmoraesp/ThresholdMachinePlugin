@@ -12,6 +12,6 @@
         Punchline: 'FFLogs real time threshold check',
         IsHide: false,
         IsTestingExclusive: false,
-        DownloadLinkInstall: 'https://github.com/miguelmoraesp/ThresholdMachinePlugin/releases/download/0.0.0.1/ThresholdMachinePlugin.zip'
+        DownloadLinkInstall: 'https://github.com/miguelmoraesp/ThresholdMachinePlugin/releases/download/0.0.0.1/ThresholdMachine.zip'
     },
 ]
