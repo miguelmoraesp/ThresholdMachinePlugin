@@ -3,7 +3,7 @@
         Author: 'Sasa',
         Name: 'Threshold Machine',
         Description: 'FFLogs real time threshold check',
-        InternalName: 'ThresholdMachinePlugin',
+        InternalName: 'ThresholdMachine',
         AssemblyVersion: '0.0.0.1',
         TestingAssemblyVersion: null,
         RepoUrl: 'https://github.com/miguelmoraesp/',
