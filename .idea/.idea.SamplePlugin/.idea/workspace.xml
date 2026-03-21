@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b483cd3e-2e32-41b5-8651-ae0fe29fb4b3" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/ThresholdMachine/Framework/CombatFramework.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ThresholdMachine/ThresholdMachine.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin.sln" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/Configuration.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/Configuration.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/Plugin.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/Plugin.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/SamplePlugin.csproj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/SamplePlugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/ThresholdMachine.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/Windows/ConfigWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/Windows/ConfigWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/Windows/MainWindow.cs" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/Windows/MainWindow.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SamplePlugin/packages.lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ThresholdMachine/packages.lock.json" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/ThresholdMachine/Framework/CombatFramework.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/ThresholdMachine/ThresholdMachine.json" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="3BAgfQ1a43s5P7qklrGmmED4wtv" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "git-widget-placeholder": "master",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b483cd3e-2e32-41b5-8651-ae0fe29fb4b3" name="Changes" comment="" />
+      <created>1773937391702</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1773937391702</updated>
+      <workItem from="1773937392976" duration="6561000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="VcsManagerConfiguration">
+    <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.OperationCanceledException" breakIfHandledByOtherCode="false" displayValue="System.OperationCanceledException" />
+          <option name="timeStamp" value="1" />
+        </breakpoint>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.Threading.Tasks.TaskCanceledException" breakIfHandledByOtherCode="false" displayValue="System.Threading.Tasks.TaskCanceledException" />
+          <option name="timeStamp" value="2" />
+        </breakpoint>
+        <breakpoint enabled="true" type="DotNet_Exception_Breakpoints">
+          <properties exception="System.Threading.ThreadAbortException" breakIfHandledByOtherCode="false" displayValue="System.Threading.ThreadAbortException" />
+          <option name="timeStamp" value="3" />
+        </breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
