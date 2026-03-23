@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -157,7 +158,13 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         var fightEnd = current["endTime"]!.GetValue<long>();
         var inProgress = current["inProgress"]!.GetValue<bool>();
 
-        var duration = Math.Max(1, (fightEnd - fightStart) / 1000.0);
+        var bracket = LastBracket;
+        if (LastBracket == null)
+        {
+            bracket = manager.GetCurrentFight()?.KillTimeBrackets.First();
+        }
+        
+        Plugin.Log.Debug("BRUH " + ParseBracketToMs(bracket.Bracket));
         
         var tableQuery = $$$"""
                             {
@@ -167,7 +174,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
                                     fightIDs: [{{{fightId}}}]
                                     dataType: DamageDone
                                     startTime: {{{fightStart}}}
-                                    endTime: {{{fightEnd}}}
+                                    endTime: {{{fightStart + ParseBracketToMs(bracket.Bracket)}}}
                                   )
                                 }
                               }
@@ -178,8 +185,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         var tableData = tableResponse["data"]!["reportData"]!["report"]!["table"]!["data"]!;
         var entries = tableData["entries"]!.AsArray();
         
-        var totalMs = tableData["totalTime"]?.GetValue<double>() ?? 0;
-        var divisor = totalMs > 0 ? totalMs / 1000 : duration;
+        var divisor = CalculateActiveMs(bracket) / 1000;
 
         var players = new List<PlayerData>(entries.Count);
         foreach (var entry in entries)
@@ -190,6 +196,17 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
             }
             
             var totalRDPS = entry["totalRDPS"]?.GetValue<double>() ?? 0;
+
+            var pets = entry["pets"]?.AsArray();
+            if (pets != null)
+            {
+                foreach (var petEntry in pets)
+                {
+                    if (petEntry == null) continue;
+                    totalRDPS += petEntry["totalRDPS"]?.GetValue<double>() ?? 0;
+                }
+            }
+
             players.Add(new PlayerData
             {
                 Name = entry["name"]?.GetValue<string>() ?? "Unknown",
@@ -297,4 +314,20 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
     private static string NormalizeJob(string raw) =>
         JobMap.TryGetValue(raw, out var abbr) ? abbr : raw.ToUpperInvariant();
+    
+    private static long ParseBracketToMs(string bracket)
+    {
+        var parts = bracket.Split(':');
+        var minutes = int.Parse(parts[0]);
+        var seconds = int.Parse(parts[1]);
+        return (minutes * 60 + seconds) * 1000L;
+    }
+    
+    private static long CalculateActiveMs(KillTimeBracket bracket)
+    {
+        var totalMs = ParseBracketToMs(bracket.Bracket);
+        var downtimeMs = bracket.Downtime.Sum(d =>
+                                                  ParseBracketToMs(d.End) - ParseBracketToMs(d.Start));
+        return totalMs - downtimeMs;
+    }
 }

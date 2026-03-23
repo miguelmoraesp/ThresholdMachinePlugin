@@ -35,12 +35,19 @@ public class Fight
 }
 
 [Serializable]
+public class DowntimePeriod
+{
+    public string Start { get; set; } = "";
+    public string End { get; set; } = "";
+}
+
+[Serializable]
 public class KillTimeBracket
 {
     public string Bracket { get; set; } = "";
-    public List<JobThreshold> Thresholds { get; set; } = new List<JobThreshold>();
+    public List<JobThreshold> Thresholds { get; set; } = new();
+    public List<DowntimePeriod> Downtime { get; set; } = new();
 }
-
 [Serializable]
 public class JobThreshold
 {

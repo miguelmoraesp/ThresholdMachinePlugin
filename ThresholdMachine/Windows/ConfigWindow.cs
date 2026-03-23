@@ -20,10 +20,13 @@ public class ConfigWindow : Window, IDisposable
     private int selectedFight = 0;
     private int newBracketMinutes = 0;
     private int newBracketSeconds = 0;
-    
+
+    // Per-bracket downtime input state: key = bracketIndex
+    private readonly System.Collections.Generic.Dictionary<int, (int StartMin, int StartSec, int EndMin, int EndSec)> newDowntime = new();
+
     private const float RoleLabelWidth = 100f;
     private const float JobColumnWidth  = 90f;
-    
+
     private static readonly (string Label, string[] Jobs)[] RoleGroups =
     [
         ("Tanks",        ["GNB", "PLD", "WAR", "DRK"]),
@@ -127,37 +130,36 @@ public class ConfigWindow : Window, IDisposable
         for (var i = 0; i < configuration.FightList.Count; i++)
         {
             if (ImGui.Selectable(manager.GetFightKeys()[i], selectedFight == i))
-            {
                 selectedFight = i;
-            }
         }
         ImGui.EndChild();
         ImGui.SameLine();
-        
+
         ImGui.BeginChild("Editor", new Vector2(0, 0), false);
         var fight = configuration.FightList[selectedFight];
-        
+
         ImGui.Text($"{fight.FightId} \u2014 rDPS targets per kill-time bracket");
         ImGui.Separator();
         ImGui.Spacing();
-        
+
         int removeIndex = -1;
         for (var bi = 0; bi < fight.KillTimeBrackets.Count; bi++)
         {
             if (DrawBracket(fight.KillTimeBrackets[bi], bi))
                 removeIndex = bi;
- 
+
             ImGui.Spacing();
             ImGui.Separator();
             ImGui.Spacing();
         }
- 
+
         if (removeIndex >= 0)
         {
             fight.KillTimeBrackets.RemoveAt(removeIndex);
+            newDowntime.Remove(removeIndex);
             configuration.Save();
         }
-        
+
         ImGui.Text("\u2264");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(42);
@@ -174,18 +176,17 @@ public class ConfigWindow : Window, IDisposable
         ImGui.SameLine();
         if (ImGui.Button("+ Add Bracket"))
             manager.AddBracket(fight.FightId, $"{newBracketMinutes}:{newBracketSeconds:D2}");
- 
-        ImGui.EndChild();
 
+        ImGui.EndChild();
     }
-    
+
     private bool DrawBracket(KillTimeBracket bracket, int bracketIndex)
     {
         ParseBracket(bracket.Bracket, out var mins, out var secs);
-        
+
         ImGui.Text("\u2264");
         ImGui.SameLine();
- 
+
         ImGui.SetNextItemWidth(42);
         if (ImGui.InputInt($"##bm{bracketIndex}", ref mins, 0, 0))
         {
@@ -196,7 +197,7 @@ public class ConfigWindow : Window, IDisposable
         ImGui.SameLine();
         ImGui.Text(":");
         ImGui.SameLine();
-        
+
         ImGui.SetNextItemWidth(42);
         if (ImGui.InputInt($"##bs{bracketIndex}", ref secs, 0, 0))
         {
@@ -204,44 +205,153 @@ public class ConfigWindow : Window, IDisposable
             bracket.Bracket = FormatBracket(mins, secs);
             configuration.Save();
         }
-        
+
         ImGui.SameLine();
         ImGui.Text("(mm:ss)");
         ImGui.SameLine();
         ImGui.Text("  =  ");
         ImGui.SameLine();
         var remove = ImGui.Button($"Remove##rem{bracketIndex}");
- 
+
+        ImGui.Spacing();
+        
+        ImGui.Text("Downtime Windows");
+        ImGui.SameLine();
+        ImGui.TextDisabled("(damage not applied — subtracted from divisor)");
         ImGui.Spacing();
 
-        foreach (var (roleLabel, jobs) in RoleGroups)
+        int removeDowntime = -1;
+        for (var di = 0; di < bracket.Downtime.Count; di++)
         {
-            DrawRoleRow(bracket, bracketIndex, roleLabel, jobs);
+            var dt = bracket.Downtime[di];
+            ParseBracket(dt.Start, out var dsm, out var dss);
+            ParseBracket(dt.End,   out var dem, out var des);
+
+            ImGui.Text("  Start");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(36);
+            if (ImGui.InputInt($"##dtsm{bracketIndex}_{di}", ref dsm, 0, 0))
+            {
+                if (dsm < 0) dsm = 0;
+                dt.Start = FormatBracket(dsm, dss);
+                configuration.Save();
+            }
+            ImGui.SameLine(); ImGui.Text(":"); ImGui.SameLine();
+            ImGui.SetNextItemWidth(36);
+            if (ImGui.InputInt($"##dtss{bracketIndex}_{di}", ref dss, 0, 0))
+            {
+                dss = Math.Clamp(dss, 0, 59);
+                dt.Start = FormatBracket(dsm, dss);
+                configuration.Save();
+            }
+
+            ImGui.SameLine();
+            ImGui.Text("  End");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(36);
+            if (ImGui.InputInt($"##dtem{bracketIndex}_{di}", ref dem, 0, 0))
+            {
+                if (dem < 0) dem = 0;
+                dt.End = FormatBracket(dem, des);
+                configuration.Save();
+            }
+            ImGui.SameLine(); ImGui.Text(":"); ImGui.SameLine();
+            ImGui.SetNextItemWidth(36);
+            if (ImGui.InputInt($"##dtes{bracketIndex}_{di}", ref des, 0, 0))
+            {
+                des = Math.Clamp(des, 0, 59);
+                dt.End = FormatBracket(dem, des);
+                configuration.Save();
+            }
+
+            ImGui.SameLine();
+            ImGui.TextDisabled($"  ({DowntimeDuration(dt.Start, dt.End)})");
+            ImGui.SameLine();
+            if (ImGui.Button($"Remove##dtrem{bracketIndex}_{di}"))
+                removeDowntime = di;
+
+            ImGui.Spacing();
         }
- 
+
+        if (removeDowntime >= 0)
+        {
+            bracket.Downtime.RemoveAt(removeDowntime);
+            configuration.Save();
+        }
+        
+        if (!newDowntime.ContainsKey(bracketIndex))
+            newDowntime[bracketIndex] = (1, 45, 2, 10);
+
+        var (nsm, nss, nem, nes) = newDowntime[bracketIndex];
+
+        ImGui.Text("  +");
+        ImGui.SameLine();
+        ImGui.Text("Start");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(36);
+        if (ImGui.InputInt($"##ndsm{bracketIndex}", ref nsm, 0, 0)) { if (nsm < 0) nsm = 0; }
+        ImGui.SameLine(); ImGui.Text(":"); ImGui.SameLine();
+        ImGui.SetNextItemWidth(36);
+        if (ImGui.InputInt($"##ndss{bracketIndex}", ref nss, 0, 0)) nss = Math.Clamp(nss, 0, 59);
+
+        ImGui.SameLine();
+        ImGui.Text("End");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(36);
+        if (ImGui.InputInt($"##ndem{bracketIndex}", ref nem, 0, 0)) { if (nem < 0) nem = 0; }
+        ImGui.SameLine(); ImGui.Text(":"); ImGui.SameLine();
+        ImGui.SetNextItemWidth(36);
+        if (ImGui.InputInt($"##ndes{bracketIndex}", ref nes, 0, 0)) nes = Math.Clamp(nes, 0, 59);
+
+        newDowntime[bracketIndex] = (nsm, nss, nem, nes);
+
+        ImGui.SameLine();
+        if (ImGui.Button($"+ Add Downtime##addt{bracketIndex}"))
+        {
+            bracket.Downtime.Add(new DowntimePeriod
+            {
+                Start = FormatBracket(nsm, nss),
+                End   = FormatBracket(nem, nes)
+            });
+            configuration.Save();
+        }
+
+        ImGui.Spacing();
+        
+        foreach (var (roleLabel, jobs) in RoleGroups)
+            DrawRoleRow(bracket, bracketIndex, roleLabel, jobs);
+
         return remove;
     }
-    
+
+    private static string DowntimeDuration(string start, string end)
+    {
+        ParseBracket(start, out var sm, out var ss);
+        ParseBracket(end,   out var em, out var es);
+        var totalSec = (em * 60 + es) - (sm * 60 + ss);
+        return totalSec >= 0 ? $"{totalSec}s downtime" : "invalid";
+    }
+
     private void DrawRoleRow(KillTimeBracket bracket, int bracketIndex, string roleLabel, string[] jobs)
     {
         var cursorY = ImGui.GetCursorPosY();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX());
         ImGui.Text(roleLabel);
- 
+
         var baseX = ImGui.GetWindowPos().X + RoleLabelWidth + ImGui.GetScrollX();
         var startY = cursorY;
- 
+
         for (var i = 0; i < jobs.Length; i++)
         {
             var job = jobs[i];
             var threshold = bracket.Thresholds.Find(t => t.JobId == job);
             if (threshold == null) continue;
- 
+
             var colX = baseX + i * JobColumnWidth;
-            
+
             ImGui.SetCursorPos(new Vector2(colX - ImGui.GetWindowPos().X, startY));
             ImGui.Text(job);
-            
+
             ImGui.SetCursorPos(new Vector2(colX - ImGui.GetWindowPos().X, startY + ImGui.GetTextLineHeight() + 2));
             ImGui.SetNextItemWidth(JobColumnWidth - 8);
             var val = threshold.Threshold;
@@ -252,11 +362,11 @@ public class ConfigWindow : Window, IDisposable
                 configuration.Save();
             }
         }
-        
+
         ImGui.SetCursorPosY(startY + ImGui.GetTextLineHeight() * 2 + 10);
         ImGui.Dummy(new Vector2(0, 2));
     }
-    
+
     private static void ParseBracket(string bracket, out int minutes, out int seconds)
     {
         minutes = 0;
@@ -265,7 +375,7 @@ public class ConfigWindow : Window, IDisposable
         if (parts.Length >= 1) int.TryParse(parts[0], out minutes);
         if (parts.Length >= 2) int.TryParse(parts[1], out seconds);
     }
- 
+
     private static string FormatBracket(int minutes, int seconds)
         => $"{minutes}:{seconds:D2}";
 }
