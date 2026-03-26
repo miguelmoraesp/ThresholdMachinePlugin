@@ -155,7 +155,6 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         
         var fightId = current["id"]!.GetValue<int>();
         var fightStart = current["startTime"]!.GetValue<long>();
-        var fightEnd = current["endTime"]!.GetValue<long>();
         var inProgress = current["inProgress"]!.GetValue<bool>();
 
         var bracket = LastBracket;
@@ -196,17 +195,6 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
             }
             
             var totalRDPS = entry["totalRDPS"]?.GetValue<double>() ?? 0;
-
-            var pets = entry["pets"]?.AsArray();
-            if (pets != null)
-            {
-                foreach (var petEntry in pets)
-                {
-                    if (petEntry == null) continue;
-                    totalRDPS += petEntry["totalRDPS"]?.GetValue<double>() ?? 0;
-                }
-            }
-
             players.Add(new PlayerData
             {
                 Name = entry["name"]?.GetValue<string>() ?? "Unknown",
