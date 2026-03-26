@@ -181,7 +181,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         var tableResponse = await PostGqlAsync(tableQuery);
 
         var tableData = tableResponse["data"]!["reportData"]!["report"]!["table"]!["data"]!;
-        var combatDowntime = tableData["damageDowntime"]!.GetValue<long>();
+        var combatDowntime = tableData["damageDowntime"]?.GetValue<long>() ?? 0;
         var combatTime = tableData["combatTime"]!.GetValue<long>();
         var entries = tableData["entries"]!.AsArray();
         
