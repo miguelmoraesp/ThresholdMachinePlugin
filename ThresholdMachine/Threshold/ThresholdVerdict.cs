@@ -37,6 +37,7 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
             case >= 1:
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"KEEP! [{bracket.Bracket}] {above.Count} players above threshold!", Type = XivChatType.Echo});
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"{string.Join(" ", above)}", Type = XivChatType.Echo});
+                Plugin.ChatGui.Print(new XivChatEntry { Message = $"Player below (decide sandbag) {string.Join(" ", below)}", Type = XivChatType.Echo});
                 break;
             case <= 0:
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"WIPE! [{bracket.Bracket}] everyone is below threshold", Type = XivChatType.Echo});
