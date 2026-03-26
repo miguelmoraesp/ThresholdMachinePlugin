@@ -162,9 +162,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         {
             bracket = manager.GetCurrentFight()?.KillTimeBrackets.First();
         }
-        
-        Plugin.Log.Debug("BRUH " + ParseBracketToMs(bracket.Bracket));
-        
+
         var tableQuery = $$$"""
                             {
                               reportData {
@@ -181,7 +179,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
                             """;
         
         var tableResponse = await PostGqlAsync(tableQuery);
-        Plugin.Log.Debug("bruh " + tableResponse);
+
         var tableData = tableResponse["data"]!["reportData"]!["report"]!["table"]!["data"]!;
         var combatDowntime = tableData["damageDowntime"]!.GetValue<long>();
         var combatTime = tableData["combatTime"]!.GetValue<long>();
