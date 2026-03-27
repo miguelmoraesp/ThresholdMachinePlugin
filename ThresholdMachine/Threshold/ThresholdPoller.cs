@@ -185,8 +185,10 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         var combatTime = tableData["combatTime"]!.GetValue<long>();
         var entries = tableData["entries"]!.AsArray();
         
-        var divisor = (combatTime - combatDowntime) / 1000;
+        var divisor = CalculateActiveMs(combatTime, bracket) / 1000;
 
+        Plugin.ChatGui.Print($"downtime {combatDowntime / 1000} dividing by {divisor}, with data {(combatTime - combatDowntime) / 1000}");
+        
         var players = new List<PlayerData>(entries.Count);
         foreach (var entry in entries)
         {
@@ -312,11 +314,10 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         return (minutes * 60 + seconds) * 1000L;
     }
     
-    private static long CalculateActiveMs(KillTimeBracket bracket)
+    private static long CalculateActiveMs(long combatTime, KillTimeBracket bracket)
     {
-        var totalMs = ParseBracketToMs(bracket.Bracket);
         var downtimeMs = bracket.Downtime.Sum(d =>
                                                   ParseBracketToMs(d.End) - ParseBracketToMs(d.Start));
-        return totalMs - downtimeMs;
+        return combatTime - downtimeMs;
     }
 }
