@@ -187,8 +187,6 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         
         var divisor = CalculateActiveMs(combatTime, bracket) / 1000;
 
-        Plugin.ChatGui.Print($"downtime {combatDowntime / 1000} dividing by {divisor}, with data {(combatTime - combatDowntime) / 1000}");
-        
         var players = new List<PlayerData>(entries.Count);
         foreach (var entry in entries)
         {

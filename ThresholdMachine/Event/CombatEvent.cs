@@ -20,7 +20,6 @@ public class CombatEvent(ThresholdPoller poller) : IDisposable
 
     private void OnConditionChanged(ConditionFlag flag, bool value)
     {
-        Plugin.Log.Debug("Flag " + flag);
         if (flag is not ConditionFlag.InCombat)
         {
             return;
