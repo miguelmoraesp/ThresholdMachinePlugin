@@ -55,12 +55,14 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
             if (above.Count >= 1)
             {
                 UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p KEEP [{bracket.Bracket}] {above.Count} players above threshold!"));
-                UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {string.Join(" ", above)}"));
+                foreach (var se in above)
+                {
+                    UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {se}"));
+                }
                 return;
             }
 
             UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p WIPE [{bracket.Bracket}] everyone is below threshold"));
-            UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {string.Join(" ", below)}"));
         }
     }
 

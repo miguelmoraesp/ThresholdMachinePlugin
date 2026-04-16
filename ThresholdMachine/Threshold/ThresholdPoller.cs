@@ -115,6 +115,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
     private async Task<ReportSnapshot> FetchCurrentPullData()
     {
+        await Task.Delay(TimeSpan.FromSeconds(10));
         if (string.IsNullOrWhiteSpace(configuration.ReportCode))
             throw new InvalidOperationException("Report code not set. Open ⚙ Config.");
 
