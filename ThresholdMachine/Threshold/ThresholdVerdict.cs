@@ -36,7 +36,7 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
                 if (diff)
                 {
                     above.Add(
-                        $"{snapshotPlayer.Name} ({snapshotPlayer.Job} -{(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
+                        $"{snapshotPlayer.Name} ({snapshotPlayer.Job} {(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
                     continue;
                 }
                 
@@ -76,19 +76,19 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
         
         if (above.Count >= 1)
         {
-            await PutPartyChat($"KEEP! [{bracket.Bracket}] {above.Count} players above threshold!");
+            await SendPartyChat($"KEEP! [{bracket.Bracket}] {above.Count} {(above.Count == 1 ? "player" : "players")} above threshold!");
             foreach (var player in above)
             {
-                await PutPartyChat(player);
+                await SendPartyChat(player);
             }
             return;
         }
 
-        await PutPartyChat("WIPE!!!");
-        await PutPartyChat($"{string.Join(" ", below)}");
+        await SendPartyChat("WIPE!!!");
+        await SendPartyChat($"{string.Join(" ", below)}");
     });
     
-    public async Task PutPartyChat(string msg)
+    public async Task SendPartyChat(string msg)
     {
         await Plugin.Framework.RunOnFrameworkThread(() =>
         {
