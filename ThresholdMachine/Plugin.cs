@@ -3,6 +3,8 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using ThresholdMachine.Event;
 using ThresholdMachine.Threshold;
 using ThresholdMachine.Windows;
@@ -11,6 +13,8 @@ namespace ThresholdMachine;
 
 public sealed class Plugin : IDalamudPlugin
 {
+    [PluginService]
+    internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;

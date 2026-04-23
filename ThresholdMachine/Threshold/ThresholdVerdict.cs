@@ -1,4 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Dalamud.Game.Text;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
@@ -15,57 +20,85 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
         foreach (var snapshotPlayer in snapshot.Players)
         {
             var jobThreshold = GetThreshold(snapshotPlayer.Job);
-            if (jobThreshold is { Threshold: 0 })
+            if (jobThreshold is { Threshold: 0 } or null)
             {
                 continue;
             }
 
-            if (snapshotPlayer.RDPS >= jobThreshold!.Threshold)
+            if (snapshotPlayer.RDPS >= jobThreshold.Threshold)
             {
                 above.Add(
                     $"{snapshotPlayer.Name} ({snapshotPlayer.Job} +{(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
             }
             else
             {
+                var diff = snapshotPlayer.RDPS >= jobThreshold.Threshold * 0.99;
+                if (diff)
+                {
+                    above.Add(
+                        $"{snapshotPlayer.Name} ({snapshotPlayer.Job} -{(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
+                    continue;
+                }
+                
                 below.Add(
                     $"{snapshotPlayer.Name} ({snapshotPlayer.Job} {(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
             }
         }
 
+        if (above.Count == 0 && below.Count == 0)
+        {
+            Plugin.ChatGui.Print(new XivChatEntry { Message = "No data found", Type = XivChatType.Echo});
+            return;
+        }
+
+        PostVerdictInPartyChat(above, below);
+        
         switch (above.Count)
         {
             case >= 1:
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"KEEP! [{bracket.Bracket}] {above.Count} players above threshold!", Type = XivChatType.Echo});
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"{string.Join(" ", above)}", Type = XivChatType.Echo});
-                Plugin.ChatGui.Print(new XivChatEntry { Message = $"Player below (decide sandbag) {string.Join(" ", below)}", Type = XivChatType.Echo});
                 break;
+
             case <= 0:
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"WIPE! [{bracket.Bracket}] everyone is below threshold", Type = XivChatType.Echo});
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"{string.Join(" ", below)}", Type = XivChatType.Echo});
                 break;
         }
-        
+    }
+
+    private void PostVerdictInPartyChat(List<string> above, List<string> below) => Task.Run(async () =>
+    {
         if (!configuration.AnnounceInPartyChat)
         {
             return;
         }
-
-        unsafe
+        
+        if (above.Count >= 1)
         {
-            if (above.Count >= 1)
+            await PutPartyChat($"KEEP! [{bracket.Bracket}] {above.Count} players above threshold!");
+            foreach (var player in above)
             {
-                UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p KEEP [{bracket.Bracket}] {above.Count} players above threshold!"));
-                foreach (var se in above)
-                {
-                    UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {se}"));
-                }
-                return;
+                await PutPartyChat(player);
             }
-
-            UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p WIPE [{bracket.Bracket}] everyone is below threshold"));
+            return;
         }
-    }
 
+        await PutPartyChat("WIPE!!!");
+        await PutPartyChat($"{string.Join(" ", below)}");
+    });
+    
+    public async Task PutPartyChat(string msg)
+    {
+        await Plugin.Framework.RunOnFrameworkThread(() =>
+        {
+            unsafe
+            {
+                UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {msg}"));
+            }
+        });
+    } 
+    
     private JobThreshold? GetThreshold(string jobId)
     {
         return bracket.Thresholds.Find(x => x.JobId == jobId);

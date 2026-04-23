@@ -87,13 +87,6 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
             LastBracket = bracket;
             await PollData();
-            if (ReportSnapshot == null)
-            {
-                continue;
-            }
-            
-            ThresholdVerdict = new ThresholdVerdict(bracket, ReportSnapshot, configuration);
-            ThresholdVerdict.GenerateVerdict();
         }
     }
 
@@ -164,6 +157,11 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
             bracket = manager.GetCurrentFight()?.KillTimeBrackets.First();
         }
 
+        if (bracket == null)
+        {
+            throw new Exception("Bracket not found");
+        }
+
         var tableQuery = $$$"""
                             {
                               reportData {
@@ -182,9 +180,13 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
         var tableResponse = await PostGqlAsync(tableQuery);
 
         var tableData = tableResponse["data"]!["reportData"]!["report"]!["table"]!["data"]!;
-        var combatDowntime = tableData["damageDowntime"]?.GetValue<long>() ?? 0;
-        var combatTime = tableData["combatTime"]!.GetValue<long>();
-        var entries = tableData["entries"]!.AsArray();
+        var combatTime = tableData["combatTime"]?.GetValue<long>() ?? 0;
+        var entries = tableData["entries"]?.AsArray() ?? [];
+
+        if (entries.Count == 0)
+        {
+            throw new Exception("No entries found");
+        }
         
         var divisor = CalculateActiveMs(combatTime, bracket) / 1000;
 
@@ -196,23 +198,27 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
                 continue;
             }
             
-            var totalRDPS = entry["totalRDPS"]?.GetValue<double>() ?? 0;
+            var totalRdps = entry["totalRDPS"]?.GetValue<double>() ?? 0;
             players.Add(new PlayerData
             {
                 Name = entry["name"]?.GetValue<string>() ?? "Unknown",
                 Job = NormalizeJob(entry["type"]?.GetValue<string>() ?? ""),
-                totalRDPS = totalRDPS,
-                RDPS = totalRDPS / divisor
+                totalRDPS = totalRdps,
+                RDPS = totalRdps / divisor
             });
         }
         
         players.Sort((a, b) => b.RDPS.CompareTo(a.RDPS));
-
-        return new ReportSnapshot
+        var reportSnapshot = new ReportSnapshot
         {
             InProgress = inProgress,
             Players = players
         };
+
+        var threshold = new ThresholdVerdict(bracket, reportSnapshot, configuration);
+        threshold.GenerateVerdict();
+        
+        return reportSnapshot;
     }
 
     private async Task EnsureTokenAsync()
@@ -225,13 +231,11 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
         var b64 = Convert.ToBase64String(
             Encoding.UTF8.GetBytes($"{configuration.ClientId}:{configuration.ClientSecret}"));
-        using var req = new HttpRequestMessage(HttpMethod.Post, TokenUrl)
+        using var req = new HttpRequestMessage(HttpMethod.Post, TokenUrl);
+        req.Content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials"
-            })
-        };
+            ["grant_type"] = "client_credentials"
+        });
         req.Headers.Authorization = new AuthenticationHeaderValue("Basic", b64);
 
         var res = await httpClient.SendAsync(req);
@@ -239,7 +243,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
         var json = JsonNode.Parse(await res.Content.ReadAsStringAsync())!;
         accessToken = json["access_token"]!.GetValue<string>();
-        int exp = json["expires_in"]?.GetValue<int>() ?? 3600;
+        var exp = json["expires_in"]?.GetValue<int>() ?? 3600;
         tokenExpiration = DateTime.UtcNow.AddSeconds(exp - 120);
 
         Plugin.Log.Debug("OAuth token refreshed, expires in {0}s", exp);
@@ -247,12 +251,10 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
     private async Task<JsonNode> PostGqlAsync(string query)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, ApiUrl)
-        {
-            Content = new StringContent(
-                JsonSerializer.Serialize(new { query }),
-                Encoding.UTF8, "application/json")
-        };
+        using var req = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
+        req.Content = new StringContent(
+            JsonSerializer.Serialize(new { query }),
+            Encoding.UTF8, "application/json");
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         var res = await httpClient.SendAsync(req);

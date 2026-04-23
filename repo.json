@@ -4,7 +4,7 @@
         Name: 'Threshold Machine',
         Description: 'FFLogs real time threshold check',
         InternalName: 'ThresholdMachine',
-        AssemblyVersion: '0.0.0.9',
+        AssemblyVersion: '0.0.1.0',
         TestingAssemblyVersion: null,
         RepoUrl: 'https://github.com/miguelmoraesp/',
         ApplicableVersion: 'any',
@@ -12,6 +12,6 @@
         Punchline: 'FFLogs real time threshold check',
         IsHide: false,
         IsTestingExclusive: false,
-        DownloadLinkInstall: 'https://github.com/miguelmoraesp/ThresholdMachinePlugin/releases/download/0.0.0.9/ThresholdMachine.zip'
+        DownloadLinkInstall: 'https://github.com/miguelmoraesp/ThresholdMachinePlugin/releases/download/0.0.1.0/ThresholdMachine.zip'
     },
 ]
