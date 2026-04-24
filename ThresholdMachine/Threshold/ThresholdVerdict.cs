@@ -85,7 +85,10 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
         }
 
         await SendPartyChat("WIPE!!!");
-        await SendPartyChat($"{string.Join(" ", below)}");
+        foreach (var se in below)
+        {
+            await SendPartyChat(se);
+        }
     });
     
     public async Task SendPartyChat(string msg)
