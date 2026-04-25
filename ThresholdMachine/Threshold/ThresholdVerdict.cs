@@ -32,7 +32,7 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
             }
             else
             {
-                var diff = snapshotPlayer.RDPS >= jobThreshold.Threshold * 0.0035;
+                var diff = snapshotPlayer.RDPS >= jobThreshold.Threshold * 0.99;
                 if (diff)
                 {
                     above.Add(
