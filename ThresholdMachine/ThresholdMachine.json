@@ -4,5 +4,6 @@
   "InternalName": "ThresholdMachine",
   "Punchline": "FFLogs real time threshold check",
   "Description": "",
-  "AssemblyVersion": "0.0.1.4"
+  "AssemblyVersion": "0.0.1.5", 
+  "DalamudApiLevel": 15
 }
