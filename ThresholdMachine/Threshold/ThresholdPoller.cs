@@ -181,6 +181,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
 
         var tableData = tableResponse["data"]!["reportData"]!["report"]!["table"]!["data"]!;
         var combatTime = tableData["combatTime"]?.GetValue<long>() ?? 0;
+ 		var combatDowntime = tableData["damageDowntime"]?.GetValue<long>() ?? 0;
         var entries = tableData["entries"]?.AsArray() ?? [];
 
         if (entries.Count == 0)
@@ -188,7 +189,7 @@ public class ThresholdPoller(Configuration configuration, FightThresholdManager 
             throw new Exception("No entries found");
         }
         
-        var divisor = CalculateActiveMs(combatTime, bracket) / 1000;
+        var divisor = (combatTime - combatDowntime) / 1000;;
 
         var players = new List<PlayerData>(entries.Count);
         foreach (var entry in entries)

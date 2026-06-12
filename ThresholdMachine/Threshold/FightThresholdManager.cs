@@ -6,7 +6,7 @@ namespace ThresholdMachine.Threshold;
 
 public class FightThresholdManager(Configuration config)
 {
-    private readonly string[] fightList = ["M9S:M9S", "M10S:M10S", "M11S:M11S", "M12SP1:M12S Phase 1", "M12SP2:M12S Phase 2"];
+    private readonly string[] fightList = ["M9S:M9S", "M10S:M10S", "M11S:M11S", "M12SP1:M12S Phase 1", "M12SP2:M12S Phase 2", "DMU:Dancing Mad"];
     private readonly string[] jobList = [
         "PLD", "WAR", "DRK", "GNB",
         "WHM", "SCH", "AST", "SGE",
@@ -17,29 +17,36 @@ public class FightThresholdManager(Configuration config)
     
     public void Adapt()
     {
+        if (config.FightList.Count <= fightList.Length)
+        {
+            foreach (var fightString in fightList)
+            {
+                var strings = fightString.Split(":");
+                var fightKey = strings[0];
+                var fightDisplayName = strings[1];
+
+                var fight = new Fight
+                {
+                    FightId = fightKey,
+                    FightDisplayName = fightDisplayName
+                };
+
+                if (config.FightList.Contains(fight))
+                {
+                    continue;
+                }
+                
+                config.FightList.Add(fight);
+                Plugin.Log.Debug("Successfully loaded " + fightDisplayName + " into configuration");
+            }
+
+            config.Save();
+        }
+
         if (config.FightList.Count > 0)
         {
-            Plugin.Log.Debug("Fight list is already loaded, skipping adapter");
-            return;
+            Plugin.Log.Debug("Skipping fight loading list");
         }
-
-        foreach (var fightString in fightList)
-        {
-            var strings = fightString.Split(":");
-            var fightKey = strings[0];
-            var fightDisplayName = strings[1];
-
-            var fight = new Fight
-            {
-                FightId = fightKey,
-                FightDisplayName = fightDisplayName
-            };
-
-            config.FightList.Add(fight);
-            Plugin.Log.Debug("Successfully loaded " + fightDisplayName + " into configuration");
-        }
-        
-        config.Save();
     }
 
     public Fight? GetCurrentFight()
