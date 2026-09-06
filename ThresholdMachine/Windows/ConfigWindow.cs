@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
@@ -21,8 +21,8 @@ public class ConfigWindow : Window, IDisposable
     private int newBracketMinutes = 0;
     private int newBracketSeconds = 0;
 
-    // Per-bracket downtime input state: key = bracketIndex
-    private readonly System.Collections.Generic.Dictionary<int, (int StartMin, int StartSec, int EndMin, int EndSec)> newDowntime = new();
+    // Add-row downtime input state: key = widget id
+    private readonly System.Collections.Generic.Dictionary<string, (int StartMin, int StartSec, int EndMin, int EndSec)> newDowntime = new();
 
     private const float RoleLabelWidth = 100f;
     private const float JobColumnWidth  = 90f;
@@ -138,7 +138,31 @@ public class ConfigWindow : Window, IDisposable
         ImGui.BeginChild("Editor", new Vector2(0, 0), false);
         var fight = configuration.FightList[selectedFight];
 
-        ImGui.Text($"{fight.FightId} \u2014 rDPS targets per kill-time bracket");
+        var usePhases = fight.UsePhases;
+        if (ImGui.Checkbox("Phase-based thresholds", ref usePhases))
+        {
+            fight.UsePhases = usePhases;
+            configuration.Save();
+        }
+
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (fight.UsePhases)
+        {
+            DrawPhaseEditor(fight);
+        }
+        else
+        {
+            DrawBracketEditor(fight);
+        }
+
+        ImGui.EndChild();
+    }
+
+    private void DrawBracketEditor(Fight fight)
+    {
+        ImGui.Text($"{fight.FightId} — rDPS targets per kill-time bracket");
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -156,11 +180,11 @@ public class ConfigWindow : Window, IDisposable
         if (removeIndex >= 0)
         {
             fight.KillTimeBrackets.RemoveAt(removeIndex);
-            newDowntime.Remove(removeIndex);
+            newDowntime.Clear();
             configuration.Save();
         }
 
-        ImGui.Text("\u2264");
+        ImGui.Text("≤");
         ImGui.SameLine();
         ImGui.SetNextItemWidth(42);
         ImGui.InputInt("##nbm", ref newBracketMinutes, 0, 0);
@@ -176,15 +200,14 @@ public class ConfigWindow : Window, IDisposable
         ImGui.SameLine();
         if (ImGui.Button("+ Add Bracket"))
             manager.AddBracket(fight.FightId, $"{newBracketMinutes}:{newBracketSeconds:D2}");
-
-        ImGui.EndChild();
     }
 
     private bool DrawBracket(KillTimeBracket bracket, int bracketIndex)
     {
         ParseBracket(bracket.Bracket, out var mins, out var secs);
+        var id = $"b{bracketIndex}";
 
-        ImGui.Text("\u2264");
+        ImGui.Text("≤");
         ImGui.SameLine();
 
         ImGui.SetNextItemWidth(42);
@@ -215,21 +238,213 @@ public class ConfigWindow : Window, IDisposable
 
         ImGui.Spacing();
 
-        ImGui.Text("  +");
-        ImGui.SameLine();
-        ImGui.Text("Start");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(36);
-       
-        ImGui.Spacing();
-        
         foreach (var (roleLabel, jobs) in RoleGroups)
-            DrawRoleRow(bracket, bracketIndex, roleLabel, jobs);
+            DrawRoleRow(bracket.Thresholds, id, roleLabel, jobs);
+
+        DrawDowntimeEditor(bracket.Downtime, id);
 
         return remove;
     }
-    
-    private void DrawRoleRow(KillTimeBracket bracket, int bracketIndex, string roleLabel, string[] jobs)
+
+    private void DrawPhaseEditor(Fight fight)
+    {
+        ImGui.Text($"{fight.FightId} — rDPS targets per phase (FFLogs-observed transitions)");
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        int removeIndex = -1;
+        for (var pi = 0; pi < fight.Phases.Count; pi++)
+        {
+            if (DrawPhase(fight.Phases[pi], selectedFight, pi))
+                removeIndex = pi;
+
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+        }
+
+        if (removeIndex >= 0)
+        {
+            fight.Phases.RemoveAt(removeIndex);
+            newDowntime.Clear();
+            configuration.Save();
+        }
+
+        if (ImGui.Button("+ Add Phase"))
+            manager.AddPhase(fight.FightId);
+    }
+
+    private bool DrawPhase(FightPhase phase, int fightIndex, int phaseIndex)
+    {
+        var id = $"f{fightIndex}p{phaseIndex}";
+
+        var name = phase.Name;
+        ImGui.SetNextItemWidth(160);
+        if (ImGui.InputText($"##pname{id}", ref name, 64))
+        {
+            phase.Name = name;
+            configuration.Save();
+        }
+
+        ImGui.SameLine();
+        ImGui.Text("starts");
+        ImGui.SameLine();
+        ParseBracket(phase.FallbackStart, out var mins, out var secs);
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##pfm{id}", ref mins, 0, 0))
+        {
+            if (mins < 0) mins = 0;
+            phase.FallbackStart = FormatBracket(mins, secs);
+            configuration.Save();
+        }
+        ImGui.SameLine();
+        ImGui.Text(":");
+        ImGui.SameLine();
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##pfs{id}", ref secs, 0, 0))
+        {
+            secs = Math.Clamp(secs, 0, 59);
+            phase.FallbackStart = FormatBracket(mins, secs);
+            configuration.Save();
+        }
+        ImGui.SameLine();
+        ImGui.Text("(mm:ss fallback)");
+        ImGui.SameLine();
+        var remove = ImGui.Button($"Remove##prem{id}");
+
+        ImGui.Spacing();
+
+        foreach (var (roleLabel, jobs) in RoleGroups)
+            DrawRoleRow(phase.Thresholds, id, roleLabel, jobs);
+
+        DrawDowntimeEditor(phase.Downtime, id);
+
+        return remove;
+    }
+
+    private void DrawDowntimeEditor(System.Collections.Generic.List<DowntimePeriod> downtime, string id)
+    {
+        ImGui.Text("  Downtime");
+        ImGui.SameLine();
+        ImGui.TextDisabled("(subtracted from combat time)");
+
+        int removeIndex = -1;
+        for (var di = 0; di < downtime.Count; di++)
+        {
+            var period = downtime[di];
+            ParseBracket(period.Start, out var startMin, out var startSec);
+            ParseBracket(period.End, out var endMin, out var endSec);
+
+            ImGui.Text("   −");
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(42);
+            if (ImGui.InputInt($"##dt_sm{di}_{id}", ref startMin, 0, 0))
+            {
+                if (startMin < 0) startMin = 0;
+                period.Start = FormatBracket(startMin, startSec);
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            ImGui.Text(":");
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(42);
+            if (ImGui.InputInt($"##dt_ss{di}_{id}", ref startSec, 0, 0))
+            {
+                startSec = Math.Clamp(startSec, 0, 59);
+                period.Start = FormatBracket(startMin, startSec);
+                configuration.Save();
+            }
+
+            ImGui.SameLine();
+            ImGui.Text("→");
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(42);
+            if (ImGui.InputInt($"##dt_em{di}_{id}", ref endMin, 0, 0))
+            {
+                if (endMin < 0) endMin = 0;
+                period.End = FormatBracket(endMin, endSec);
+                configuration.Save();
+            }
+            ImGui.SameLine();
+            ImGui.Text(":");
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(42);
+            if (ImGui.InputInt($"##dt_es{di}_{id}", ref endSec, 0, 0))
+            {
+                endSec = Math.Clamp(endSec, 0, 59);
+                period.End = FormatBracket(endMin, endSec);
+                configuration.Save();
+            }
+
+            ImGui.SameLine();
+            ImGui.Text("(mm:ss)");
+            ImGui.SameLine();
+            if (ImGui.Button($"x##dt_rem{di}_{id}"))
+                removeIndex = di;
+        }
+
+        if (removeIndex >= 0)
+        {
+            downtime.RemoveAt(removeIndex);
+            configuration.Save();
+        }
+
+        if (!newDowntime.TryGetValue(id, out var add))
+            add = (0, 0, 0, 0);
+
+        ImGui.Text("   +");
+        ImGui.SameLine();
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##dt_nsm_{id}", ref add.StartMin, 0, 0) && add.StartMin < 0)
+            add.StartMin = 0;
+        ImGui.SameLine();
+        ImGui.Text(":");
+        ImGui.SameLine();
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##dt_nss_{id}", ref add.StartSec, 0, 0))
+            add.StartSec = Math.Clamp(add.StartSec, 0, 59);
+
+        ImGui.SameLine();
+        ImGui.Text("→");
+        ImGui.SameLine();
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##dt_nem_{id}", ref add.EndMin, 0, 0) && add.EndMin < 0)
+            add.EndMin = 0;
+        ImGui.SameLine();
+        ImGui.Text(":");
+        ImGui.SameLine();
+
+        ImGui.SetNextItemWidth(42);
+        if (ImGui.InputInt($"##dt_nes_{id}", ref add.EndSec, 0, 0))
+            add.EndSec = Math.Clamp(add.EndSec, 0, 59);
+
+        ImGui.SameLine();
+        ImGui.Text("(mm:ss)");
+        ImGui.SameLine();
+        if (ImGui.Button($"+ Add Downtime##dt_add_{id}"))
+        {
+            downtime.Add(new DowntimePeriod
+            {
+                Start = FormatBracket(add.StartMin, add.StartSec),
+                End = FormatBracket(add.EndMin, add.EndSec),
+            });
+            add = (0, 0, 0, 0);
+            configuration.Save();
+        }
+
+        newDowntime[id] = add;
+    }
+
+    private void DrawRoleRow(System.Collections.Generic.List<JobThreshold> thresholds, string id, string roleLabel, string[] jobs)
     {
         var cursorY = ImGui.GetCursorPosY();
         ImGui.SetCursorPosX(ImGui.GetCursorPosX());
@@ -241,7 +456,7 @@ public class ConfigWindow : Window, IDisposable
         for (var i = 0; i < jobs.Length; i++)
         {
             var job = jobs[i];
-            var threshold = bracket.Thresholds.Find(t => t.JobId == job);
+            var threshold = thresholds.Find(t => t.JobId == job);
             if (threshold == null) continue;
 
             var colX = baseX + i * JobColumnWidth;
@@ -252,7 +467,7 @@ public class ConfigWindow : Window, IDisposable
             ImGui.SetCursorPos(new Vector2(colX - ImGui.GetWindowPos().X, startY + ImGui.GetTextLineHeight() + 2));
             ImGui.SetNextItemWidth(JobColumnWidth - 8);
             var val = threshold.Threshold;
-            if (ImGui.InputInt($"##{job}_{bracketIndex}", ref val, 0, 0))
+            if (ImGui.InputInt($"##{job}_{id}", ref val, 0, 0))
             {
                 if (val < 0) val = 0;
                 threshold.Threshold = val;

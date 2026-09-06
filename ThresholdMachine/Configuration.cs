@@ -32,6 +32,17 @@ public class Fight
     public string FightDisplayName  { get; set; } = "";
     public string FightId { get; set; } = "";
     public List<KillTimeBracket> KillTimeBrackets { get; set; }= new List<KillTimeBracket>();
+    public bool UsePhases { get; set; } = false;
+    public List<FightPhase> Phases { get; set; } = new();
+}
+
+[Serializable]
+public class FightPhase
+{
+    public string Name { get; set; } = "";
+    public string FallbackStart { get; set; } = "";
+    public List<JobThreshold> Thresholds { get; set; } = new();
+    public List<DowntimePeriod> Downtime { get; set; } = new();
 }
 
 [Serializable]
