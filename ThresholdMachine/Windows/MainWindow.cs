@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -67,12 +68,13 @@ public class MainWindow : Window, IDisposable
         ImGui.Spacing();
         if (poller.State == PollerState.Polling)
         {
-            ImGui.Text(poller.TimeInCombat);
-            if (poller.ReportSnapshot != null)
+            ImGui.Text(GetPollStatusText());
+            ImGui.Spacing();
+            if (poller.ReportSnapshot is { Players.Count: > 0 })
             {
                 DrawTable();
             }
-            else
+            else if (poller.ReportSnapshot == null)
             {
                 ImGui.Text("Still waiting for data until table is shown!");
             }
@@ -80,11 +82,11 @@ public class MainWindow : Window, IDisposable
         else if (poller.State == PollerState.WaitingForPull)
         {
             ImGui.Spacing();
-            if (poller.ReportSnapshot != null)
+            if (poller.ReportSnapshot is { Players.Count: > 0 })
             {
                 DrawTable();
             }
-            else
+            else if (poller.ReportSnapshot == null)
             {
                 ImGui.Text("Still waiting for data until table is shown!");
             }
@@ -115,15 +117,11 @@ public class MainWindow : Window, IDisposable
         ImGui.TableSetupColumn("Δ rDPS", ImGuiTableColumnFlags.WidthFixed,   76f);
         ImGui.TableHeadersRow();
         
-        var bracket = poller.LastBracket;
-        if (bracket == null)
-        {
-            bracket = manager.GetCurrentFight()?.KillTimeBrackets.First();
-        }
-        
+        var thresholds = GetActiveThresholds();
+
         foreach (var player in poller.ReportSnapshot.Players)
         {
-            var jobThreshold = bracket?.Thresholds.Find(x => x.JobId == player.Job);
+            var jobThreshold = thresholds?.Find(x => x.JobId == player.Job);
             if (jobThreshold is not { Threshold: > 0 })
             {
                 continue;
@@ -150,6 +148,44 @@ public class MainWindow : Window, IDisposable
         }
         
         ImGui.EndTable();
+    }
+
+    private bool IsPhaseMode()
+    {
+        return manager.GetCurrentFight() is { UsePhases: true };
+    }
+
+    private List<JobThreshold>? GetActiveThresholds()
+    {
+        if (IsPhaseMode())
+        {
+            return poller.LastPhase?.Thresholds;
+        }
+
+        var bracket = poller.LastBracket;
+        if (bracket == null)
+        {
+            bracket = manager.GetCurrentFight()?.KillTimeBrackets.First();
+        }
+
+        return bracket?.Thresholds;
+    }
+
+    private string GetPollStatusText()
+    {
+        var pullTimer = $"Pull {poller.TimeInCombat ?? "0:00"}";
+        if (!IsPhaseMode())
+        {
+            return pullTimer;
+        }
+
+        var context = poller.LastPhaseContext;
+        if (context == null)
+        {
+            return $"{pullTimer} · Waiting for phase data…";
+        }
+
+        return $"{pullTimer} · {context.Name} (since {PhaseResolver.FormatMs(context.StartMs - context.FightStartMs)})";
     }
 
     private string GetMachineStateText()

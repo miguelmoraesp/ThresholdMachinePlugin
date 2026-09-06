@@ -58,13 +58,46 @@ public class FightThresholdManager(Configuration config)
     {
         return fight.KillTimeBrackets.Find(b => b.Bracket == bracket);
     }
-    
+
+    public FightPhase? GetPhase(Fight fight, int index)
+    {
+        return index >= 0 && index < fight.Phases.Count ? fight.Phases[index] : null;
+    }
+
+    public void AddPhase(string fightId)
+    {
+        var fight = GetFight(fightId);
+        if (fight == null)
+        {
+            Plugin.Log.Error("No fight found for " + fightId);
+            return;
+        }
+
+        var phase = new FightPhase
+        {
+            Name = $"Phase {fight.Phases.Count + 1}"
+        };
+
+        foreach (var job in jobList)
+        {
+            phase.Thresholds.Add(new JobThreshold
+            {
+                JobId = job,
+                Threshold = 0
+            });
+        }
+
+        fight.Phases.Add(phase);
+        config.Save();
+        Plugin.Log.Debug("Successfully added " + phase.Name + " to configuration");
+    }
+
     public void AddBracket(string fightId, string bracketString)
     {
         var fight = GetFight(fightId);
         if (fight == null)
         {
-            Plugin.Log.Error("No fight found for " + fight);
+            Plugin.Log.Error("No fight found for " + fightId);
             return;
         }
 

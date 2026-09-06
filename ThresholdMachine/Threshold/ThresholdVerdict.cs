@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
@@ -10,7 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace ThresholdMachine.Threshold;
 
-public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, Configuration configuration)
+public class ThresholdVerdict(string label, List<JobThreshold> thresholds, ReportSnapshot snapshot, Configuration configuration)
 {
     public void GenerateVerdict()
     {
@@ -39,7 +39,7 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
                         $"{snapshotPlayer.Name} ({snapshotPlayer.Job} {(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
                     continue;
                 }
-                
+
                 below.Add(
                     $"{snapshotPlayer.Name} ({snapshotPlayer.Job} {(int)(snapshotPlayer.RDPS - jobThreshold.Threshold):N0})");
             }
@@ -52,16 +52,16 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
         }
 
         PostVerdictInPartyChat(above, below);
-        
+
         switch (above.Count)
         {
             case >= 1:
-                Plugin.ChatGui.Print(new XivChatEntry { Message = $"KEEP! [{bracket.Bracket}] {above.Count} players above threshold!", Type = XivChatType.Echo});
+                Plugin.ChatGui.Print(new XivChatEntry { Message = $"KEEP! [{label}] {above.Count} players above threshold!", Type = XivChatType.Echo});
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"{string.Join(" ", above)}", Type = XivChatType.Echo});
                 break;
 
             case <= 0:
-                Plugin.ChatGui.Print(new XivChatEntry { Message = $"WIPE! [{bracket.Bracket}] everyone is below threshold", Type = XivChatType.Echo});
+                Plugin.ChatGui.Print(new XivChatEntry { Message = $"WIPE! [{label}] everyone is below threshold", Type = XivChatType.Echo});
                 Plugin.ChatGui.Print(new XivChatEntry { Message = $"{string.Join(" ", below)}", Type = XivChatType.Echo});
                 break;
         }
@@ -73,10 +73,10 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
         {
             return;
         }
-        
+
         if (above.Count >= 1)
         {
-            await SendPartyChat($"KEEP! [{bracket.Bracket}] {above.Count} {(above.Count == 1 ? "player" : "players")} above threshold!");
+            await SendPartyChat($"KEEP! [{label}] {above.Count} {(above.Count == 1 ? "player" : "players")} above threshold!");
             foreach (var player in above)
             {
                 await SendPartyChat(player);
@@ -90,7 +90,7 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
             await SendPartyChat(se);
         }
     });
-    
+
     public async Task SendPartyChat(string msg)
     {
         await Plugin.Framework.RunOnFrameworkThread(() =>
@@ -100,10 +100,10 @@ public class ThresholdVerdict(KillTimeBracket bracket, ReportSnapshot snapshot, 
                 UIModule.Instance()->ProcessChatBoxEntry(Utf8String.FromString($"/p {msg}"));
             }
         });
-    } 
-    
+    }
+
     private JobThreshold? GetThreshold(string jobId)
     {
-        return bracket.Thresholds.Find(x => x.JobId == jobId);
+        return thresholds.Find(x => x.JobId == jobId);
     }
 }
